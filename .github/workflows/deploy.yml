@@ -1,0 +1,49 @@
+# Reusable deploy job: one definition for Dev, UAT and Prod, so every environment is deployed the same way.
+# Runs on the self-hosted runner that can reach Floci. Also used by the rollback workflow.
+name: Deploy
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: GitHub Environment (production requires manual approval)
+        type: string
+        required: true
+      env_name:
+        description: Terraform environment (dev, uat or prod)
+        type: string
+        required: true
+      image:
+        description: Full image reference, tag = commit SHA
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: ${{ inputs.env_name }}
+    runs-on: [self-hosted, floci]
+    environment:
+      name: ${{ inputs.environment }}
+    env:
+      AWS_ENDPOINT_URL: http://localhost:4566
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_PAGER: ""
+      TF_IN_AUTOMATION: "true"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Terraform plan
+        run: make tf-plan ENV=${{ inputs.env_name }} IMAGE=${{ inputs.image }}
+
+      - name: Terraform apply
+        run: make tf-apply ENV=${{ inputs.env_name }}
+
+      # B2: the deployment fails if Traccar does not come up with the new version.
+      - name: Smoke test
+        run: make smoke ENV=${{ inputs.env_name }}

@@ -1,0 +1,119 @@
+# Continuous delivery. One image per commit (tag = commit SHA), built and scanned once,
+# then promoted unchanged Dev -> UAT -> Prod. Prod requires manual approval (GitHub Environment).
+# Build runs on a GitHub-hosted runner; deploys run on the self-hosted runner next to Floci (DD-31).
+name: CD
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Never cancel a deployment halfway; queue the next one instead.
+concurrency:
+  group: cd
+  cancel-in-progress: false
+
+env:
+  TERRAFORM_VERSION: 1.14.1
+  SYFT_VERSION: v1.57.2
+  GRYPE_VERSION: v0.122.1
+
+jobs:
+  build-push:
+    name: Build, scan and push image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.ref.outputs.image }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # GHCR names must be lowercase; the repository owner is not.
+      - name: Image reference
+        id: ref
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY,,}/traccar:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Build image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: images/traccar
+          load: true
+          push: false
+          tags: ${{ steps.ref.outputs.image }}
+
+      # Scan the exact image that will be promoted, not only the PR build.
+      - name: Install Syft
+        id: syft
+        uses: anchore/sbom-action/download-syft@dfcb83b97731532d72be422cbc51ee64adb6fd56 # v0.24.4
+        with:
+          syft-version: ${{ env.SYFT_VERSION }}
+
+      - name: Generate SBOM
+        run: |
+          "${{ steps.syft.outputs.cmd }}" scan "docker:${{ steps.ref.outputs.image }}" \
+            -o syft-json=sbom.syft.json \
+            -o cyclonedx-json=sbom.cdx.json
+
+      - name: Scan SBOM with Grype
+        uses: anchore/scan-action@11983a512817154c80a9db660c1a184be7513ed6 # v7.4.3
+        with:
+          sbom: sbom.syft.json
+          grype-version: ${{ env.GRYPE_VERSION }}
+          fail-build: true
+          severity-cutoff: high
+          only-fixed: true
+          output-format: table
+
+      # The SBOM travels with the image: same SHA in its name.
+      - name: Upload SBOM
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sbom-${{ github.sha }}
+          path: sbom.*.json
+          retention-days: 90
+
+      - name: Log in to GHCR
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push image
+        run: docker push "${{ steps.ref.outputs.image }}"
+
+  deploy-dev:
+    name: Deploy to Dev
+    needs: build-push
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: dev
+      env_name: dev
+      image: ${{ needs.build-push.outputs.image }}
+
+  deploy-uat:
+    name: Deploy to UAT
+    needs: [build-push, deploy-dev]
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: uat
+      env_name: uat
+      image: ${{ needs.build-push.outputs.image }}
+
+  deploy-prod:
+    name: Deploy to Prod
+    needs: [build-push, deploy-uat]
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: production
+      env_name: prod
+      image: ${{ needs.build-push.outputs.image }}
