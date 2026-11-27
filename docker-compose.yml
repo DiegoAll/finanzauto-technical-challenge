@@ -11,6 +11,8 @@ services:
       FLOCI_HOSTNAME: floci
       FLOCI_DEFAULT_REGION: us-east-1
       FLOCI_SERVICES_UI_BIND_ADDRESS: 127.0.0.1
+      FLOCI_SERVICES_ECS_DOCKER_NETWORK: avl
+      FLOCI_SERVICES_ECS_PUBLISH_AWSVPC_PORTS_TO_HOST: "true"
     volumes:
       - floci-data:/app/data
       - /var/run/docker.sock:/var/run/docker.sock
