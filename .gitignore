@@ -1,0 +1,4 @@
+.floci-data/
+.terraform/
+*.tfstate*
+.env
