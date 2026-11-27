@@ -1,0 +1,26 @@
+name: avl-platform
+
+services:
+  floci:
+    image: floci/floci:2.4.0@sha256:5ee85db604c4aa74ac76e07ea5cc83086f37bb472bf3dbb97e34019e48efae9c
+    container_name: floci
+    ports:
+      - "127.0.0.1:4566:4566"
+    environment:
+      FLOCI_STORAGE_MODE: persistent
+      FLOCI_HOSTNAME: floci
+      FLOCI_DEFAULT_REGION: us-east-1
+      FLOCI_SERVICES_UI_BIND_ADDRESS: 127.0.0.1
+    volumes:
+      - floci-data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - avl
+
+volumes:
+  floci-data:
+    name: floci-data
+
+networks:
+  avl:
+    name: avl
