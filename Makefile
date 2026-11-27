@@ -13,7 +13,7 @@ ACCOUNT_dev  := 111111111111
 ACCOUNT_uat  := 222222222222
 ACCOUNT_prod := 333333333333
 
-.PHONY: help check-env floci-up floci-down bootstrap bootstrap-all
+.PHONY: help check-env floci-up floci-down bootstrap-plan bootstrap-apply bootstrap-all
 
 help: ## Show available targets
 	@grep -hE '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-15s %s\n", $$1, $$2}'
@@ -27,12 +27,19 @@ floci-up: ## Start the AWS emulator
 floci-down: ## Stop the AWS emulator (state is kept)
 	docker compose down
 
-bootstrap: check-env ## Create the Terraform state bucket for ENV (dev|uat|prod)
+bootstrap-plan: check-env ## Plan the state bucket for ENV and save it to a plan file
 	cd infra/bootstrap && \
 	export AWS_ACCESS_KEY_ID=$(ACCOUNT_$(ENV)) && \
 	terraform init -input=false && \
 	terraform workspace select -or-create $(ENV) && \
-	terraform apply
+	terraform plan -input=false -out=$(ENV).tfplan
 
-bootstrap-all: ## Create the state buckets for all environments
-	@for env in $(ENVIRONMENTS); do $(MAKE) --no-print-directory bootstrap ENV=$$env; done
+bootstrap-apply: check-env ## Apply the saved plan for ENV (run bootstrap-plan first)
+	cd infra/bootstrap && \
+	export AWS_ACCESS_KEY_ID=$(ACCOUNT_$(ENV)) && \
+	terraform workspace select $(ENV) && \
+	terraform apply -input=false $(ENV).tfplan && \
+	rm -f $(ENV).tfplan
+
+bootstrap-all: ## Plan and apply the state buckets for all environments
+	@for env in $(ENVIRONMENTS); do $(MAKE) --no-print-directory bootstrap-plan bootstrap-apply ENV=$$env; done
