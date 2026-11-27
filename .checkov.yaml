@@ -1,0 +1,23 @@
+# Checkov exceptions. Each skip is a deliberate decision for a local AWS emulator (Floci)
+# and is listed as a real-AWS improvement in the report. Everything else must pass.
+skip-check:
+  # RDS
+  - CKV_AWS_157   # Multi-AZ: high availability doubles cost; a single local instance is enough for the lab.
+  - CKV_AWS_353   # Performance Insights: paid monitoring feature, not emulated.
+  - CKV_AWS_118   # Enhanced Monitoring: needs a monitoring IAM role and CloudWatch agent, not emulated.
+  - CKV_AWS_129   # PostgreSQL log exports to CloudWatch: export not verified on Floci; app logs already go to CloudWatch.
+  - CKV2_AWS_30   # Query logging: same as CKV_AWS_129; also logs SQL text, which is noisy and may expose data.
+  - CKV_AWS_161   # IAM database authentication: Traccar's JDBC driver uses a static password, delivered via Secrets Manager.
+  # Encryption with customer-managed KMS keys (AWS-managed encryption is already enabled)
+  - CKV_AWS_149   # Secrets Manager secret with a CMK.
+  - CKV_AWS_158   # CloudWatch log group with a CMK.
+  - CKV_AWS_145   # S3 buckets with KMS instead of SSE-S3 (AES256).
+  # Secrets
+  - CKV2_AWS_57   # Automatic rotation needs a rotation Lambda and a Traccar restart strategy; out of scope.
+  # S3 (state and backup buckets)
+  - CKV_AWS_18    # Access logging: needs a dedicated log bucket per account.
+  - CKV_AWS_144   # Cross-region replication: single emulated region.
+  - CKV2_AWS_62   # Event notifications: no consumer for bucket events in this design.
+  - CKV2_AWS_61   # Lifecycle on the state bucket: every state version is kept on purpose for recovery.
+  # ECS
+  - CKV_AWS_65    # Container Insights: extra CloudWatch cost; service metrics and logs are covered separately.
