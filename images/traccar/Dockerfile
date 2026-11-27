@@ -1,7 +1,7 @@
 # Traccar GPS server image.
 # Built once per commit in CI and promoted unchanged to Dev, UAT and Prod.
 # Configuration comes only from environment variables: no traccar.xml with credentials.
-FROM traccar/traccar:6.17.0-alpine
+FROM traccar/traccar:6.17.0-alpine@sha256:b32d9346adf46df7c33c58577e17ad60f6feadd1f3cd87c876041f6c79317ef1
 
 # Ports: 8082 web UI/API, 5055 OsmAnd protocol (GPS simulator).
 EXPOSE 8082 5055
