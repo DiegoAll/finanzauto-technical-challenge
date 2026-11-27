@@ -1,0 +1,70 @@
+# Grype accepted risks (provisional policy, see DD-25 in the design decisions).
+# Only HIGH/CRITICAL findings with a fix fail the build. Each entry below is a finding
+# that only the Traccar project can fix. OS packages are patched in the Dockerfile instead.
+# Rules match one vulnerability on one package: new CVEs on the same package still fail.
+ignore:
+  - vulnerability: CVE-2026-114938
+    package:
+      name: openjdk
+      type: binary
+    reason: "Upstream traccar/traccar:6.17.0 (latest release) bundles this JRE (jlink from eclipse-temurin:25); no Traccar release ships the fix yet. Tracked by Dependabot on the base image. Review by 2026-12-31. Highest priority (EPSS): rebuilding the JRE is the planned mitigation."
+  - vulnerability: CVE-2026-114939
+    package:
+      name: openjdk
+      type: binary
+    reason: "Upstream traccar/traccar:6.17.0 (latest release) bundles this JRE (jlink from eclipse-temurin:25); no Traccar release ships the fix yet. Tracked by Dependabot on the base image. Review by 2026-12-31. Highest priority (EPSS): rebuilding the JRE is the planned mitigation."
+  - vulnerability: CVE-2026-114940
+    package:
+      name: openjdk
+      type: binary
+    reason: "Upstream traccar/traccar:6.17.0 (latest release) bundles this JRE (jlink from eclipse-temurin:25); no Traccar release ships the fix yet. Tracked by Dependabot on the base image. Review by 2026-12-31. Highest priority (EPSS): rebuilding the JRE is the planned mitigation."
+  - vulnerability: CVE-2026-114941
+    package:
+      name: openjdk
+      type: binary
+    reason: "Upstream traccar/traccar:6.17.0 (latest release) bundles this JRE (jlink from eclipse-temurin:25); no Traccar release ships the fix yet. Tracked by Dependabot on the base image. Review by 2026-12-31. Highest priority (EPSS): rebuilding the JRE is the planned mitigation."
+  - vulnerability: CVE-2026-114942
+    package:
+      name: openjdk
+      type: binary
+    reason: "Upstream traccar/traccar:6.17.0 (latest release) bundles this JRE (jlink from eclipse-temurin:25); no Traccar release ships the fix yet. Tracked by Dependabot on the base image. Review by 2026-12-31. Highest priority (EPSS): rebuilding the JRE is the planned mitigation."
+  - vulnerability: GHSA-wxr5-93ph-8wr9
+    package:
+      name: commons-beanutils
+      type: java-archive
+    reason: "Upstream traccar/traccar:6.17.0 (latest release) bundles this library inside the application; no Traccar release ships the fix yet. Tracked by Dependabot on the base image. Review by 2026-12-31."
+  - vulnerability: GHSA-p6pp-m3f8-5c89
+    package:
+      name: jackson-core
+      type: java-archive
+    reason: "Upstream traccar/traccar:6.17.0 (latest release) bundles this library inside the application; no Traccar release ships the fix yet. Tracked by Dependabot on the base image. Review by 2026-12-31."
+  - vulnerability: GHSA-r7wm-3cxj-wff9
+    package:
+      name: jackson-core
+      type: java-archive
+    reason: "Upstream traccar/traccar:6.17.0 (latest release) bundles this library inside the application; no Traccar release ships the fix yet. Tracked by Dependabot on the base image. Review by 2026-12-31."
+  - vulnerability: GHSA-7hhh-6rmp-j9qf
+    package:
+      name: jackson-core
+      type: java-archive
+    reason: "Upstream traccar/traccar:6.17.0 (latest release) bundles this library inside the application; no Traccar release ships the fix yet. Tracked by Dependabot on the base image. Review by 2026-12-31."
+  - vulnerability: GHSA-q233-g92q-qxp6
+    package:
+      name: snappy-java
+      type: java-archive
+    reason: "Upstream traccar/traccar:6.17.0 (latest release) bundles this library inside the application; no Traccar release ships the fix yet. Tracked by Dependabot on the base image. Review by 2026-12-31."
+  - vulnerability: GHSA-gwq9-9ffj-mvrv
+    package:
+      name: snappy-java
+      type: java-archive
+    reason: "Upstream traccar/traccar:6.17.0 (latest release) bundles this library inside the application; no Traccar release ships the fix yet. Tracked by Dependabot on the base image. Review by 2026-12-31."
+  - vulnerability: GHSA-xxph-c9ww-hj94
+    package:
+      name: guava
+      type: java-archive
+    reason: "Upstream traccar/traccar:6.17.0 (latest release) bundles this library inside the application; no Traccar release ships the fix yet. Tracked by Dependabot on the base image. Review by 2026-12-31."
+  - vulnerability: GHSA-mcr4-qmvw-px4g
+    package:
+      name: lz4-java
+      type: java-archive
+    reason: "Upstream traccar/traccar:6.17.0 (latest release) bundles this library inside the application; no Traccar release ships the fix yet. Tracked by Dependabot on the base image. Review by 2026-12-31."
