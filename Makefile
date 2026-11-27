@@ -13,7 +13,10 @@ ACCOUNT_dev  := 111111111111
 ACCOUNT_uat  := 222222222222
 ACCOUNT_prod := 333333333333
 
-.PHONY: help check-env floci-up floci-down bootstrap-plan bootstrap-apply bootstrap-all tf-init tf-plan tf-apply tf-output
+.PHONY: help check-env floci-up floci-down bootstrap-plan bootstrap-apply bootstrap-all tf-init tf-plan tf-apply tf-output smoke
+
+# Optional image override, e.g. IMAGE=ghcr.io/owner/repo/traccar:<sha>. The CD sets it; empty uses the tfvars value.
+IMAGE ?=
 
 help: ## Show available targets
 	@grep -hE '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-15s %s\n", $$1, $$2}'
@@ -52,7 +55,7 @@ tf-init: check-env ## Init infra/environments against the state bucket of ENV
 tf-plan: tf-init ## Plan ENV with its tfvars and save it to a plan file
 	cd infra/environments && \
 	export AWS_ACCESS_KEY_ID=$(ACCOUNT_$(ENV)) && \
-	terraform plan -input=false -var-file=envs/$(ENV).tfvars -out=$(ENV).tfplan
+	terraform plan -input=false -var-file=envs/$(ENV).tfvars $(if $(IMAGE),-var image=$(IMAGE)) -out=$(ENV).tfplan
 
 tf-apply: check-env ## Apply the saved plan for ENV (run tf-plan first)
 	cd infra/environments && \
@@ -64,3 +67,20 @@ tf-output: tf-init ## Show the outputs of ENV
 	cd infra/environments && \
 	export AWS_ACCESS_KEY_ID=$(ACCOUNT_$(ENV)) && \
 	terraform output
+
+smoke: tf-init ## Wait for the ECS rollout of ENV to finish and Traccar to answer /api/server
+	cd infra/environments && \
+	export AWS_ACCESS_KEY_ID=$(ACCOUNT_$(ENV)) && \
+	url=$$(terraform output -raw web_url) && \
+	cluster=$$(terraform output -raw cluster_name) && \
+	service=$$(terraform output -raw service_name) && \
+	for i in $$(seq 1 30); do \
+		state=$$(aws ecs describe-services --cluster "$$cluster" --services "$$service" \
+			--query 'services[0].[length(deployments), runningCount, desiredCount]' --output text); \
+		read -r deployments running desired <<< "$$state"; \
+		if [ "$$deployments" = "1" ] && [ "$$running" = "$$desired" ] && curl -sf --max-time 5 "$$url/api/server" > /dev/null; then \
+			echo "Traccar $(ENV) is up at $$url (deployments=$$deployments running=$$running/$$desired)"; exit 0; \
+		fi; \
+		echo "Waiting for Traccar $(ENV) ($$i/30): deployments=$$deployments running=$$running/$$desired"; sleep 10; \
+	done; \
+	echo "Traccar $(ENV) did not become healthy at $$url"; exit 1
