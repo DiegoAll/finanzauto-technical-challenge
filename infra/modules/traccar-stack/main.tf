@@ -114,6 +114,9 @@ resource "aws_db_instance" "this" {
   allocated_storage = var.db_allocated_storage
   storage_encrypted = true
 
+  auto_minor_version_upgrade = true
+  copy_tags_to_snapshot      = true
+
   db_name  = local.db_name
   username = local.db_username
   password = random_password.db.result
@@ -297,6 +300,10 @@ resource "aws_s3_bucket_lifecycle_configuration" "backups" {
 
     noncurrent_version_expiration {
       noncurrent_days = var.backup_retention_days
+    }
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 1
     }
   }
 }
