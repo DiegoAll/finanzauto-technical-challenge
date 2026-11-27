@@ -1,0 +1,41 @@
+# Local validation of the Traccar image against PostgreSQL.
+# Not used by the environments: Dev, UAT and Prod run on ECS + RDS in Floci via Terraform.
+# Usage: docker compose -f docker-compose.traccar.yml up -d --build
+name: avl-traccar-local
+
+services:
+  traccar-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: traccar
+      POSTGRES_USER: traccar
+      POSTGRES_PASSWORD: ${TRACCAR_DB_PASSWORD:?set TRACCAR_DB_PASSWORD in .env}
+    volumes:
+      - traccar-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U traccar -d traccar"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  traccar:
+    build:
+      context: ./images/traccar
+    image: avl/traccar:local
+    depends_on:
+      traccar-db:
+        condition: service_healthy
+    environment:
+      CONFIG_USE_ENVIRONMENT_VARIABLES: "true"
+      DATABASE_DRIVER: org.postgresql.Driver
+      DATABASE_URL: jdbc:postgresql://traccar-db:5432/traccar
+      DATABASE_USER: traccar
+      DATABASE_PASSWORD: ${TRACCAR_DB_PASSWORD:?set TRACCAR_DB_PASSWORD in .env}
+      LOGGER_CONSOLE: "true"
+    ports:
+      - "127.0.0.1:8082:8082"
+      - "127.0.0.1:5055:5055"
+
+volumes:
+  traccar-db-data:
+    name: avl-traccar-local-db
