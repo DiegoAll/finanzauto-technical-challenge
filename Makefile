@@ -13,7 +13,7 @@ ACCOUNT_dev  := 111111111111
 ACCOUNT_uat  := 222222222222
 ACCOUNT_prod := 333333333333
 
-.PHONY: help check-env floci-up floci-down bootstrap-plan bootstrap-apply bootstrap-all tf-init tf-plan tf-apply tf-output smoke
+.PHONY: help check-env floci-up floci-down bootstrap-plan bootstrap-apply bootstrap-all tf-init tf-plan tf-apply tf-output smoke backup restore-test
 
 # Optional image override, e.g. IMAGE=ghcr.io/owner/repo/traccar:<sha>. The CD sets it; empty uses the tfvars value.
 IMAGE ?=
@@ -89,3 +89,9 @@ smoke: tf-init ## Check that ENV runs exactly the deployed task definition and T
 		echo "Waiting for Traccar $(ENV) ($$i/30): running=[$${running:-none}]"; sleep 10; \
 	done; \
 	echo "Traccar $(ENV) is not running the expected task definition or not answering at $$url"; exit 1
+
+backup: tf-init ## Dump the database of ENV (default prod) to its S3 backup bucket
+	export AWS_ACCESS_KEY_ID=$(ACCOUNT_$(ENV)) && scripts/backup.sh $(ENV)
+
+restore-test: tf-init ## Restore the latest backup of ENV into a temporary database and compare row counts
+	export AWS_ACCESS_KEY_ID=$(ACCOUNT_$(ENV)) && scripts/restore-test.sh $(ENV)
