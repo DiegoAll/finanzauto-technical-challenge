@@ -68,19 +68,24 @@ tf-output: tf-init ## Show the outputs of ENV
 	export AWS_ACCESS_KEY_ID=$(ACCOUNT_$(ENV)) && \
 	terraform output
 
-smoke: tf-init ## Wait for the ECS rollout of ENV to finish and Traccar to answer /api/server
+smoke: tf-init ## Check that ENV runs exactly the deployed task definition and Traccar answers /api/server
 	cd infra/environments && \
 	export AWS_ACCESS_KEY_ID=$(ACCOUNT_$(ENV)) && \
 	url=$$(terraform output -raw web_url) && \
 	cluster=$$(terraform output -raw cluster_name) && \
 	service=$$(terraform output -raw service_name) && \
+	expected=$$(terraform output -raw task_definition_arn) && \
+	echo "Expected task definition: $$expected" && \
 	for i in $$(seq 1 30); do \
-		state=$$(aws ecs describe-services --cluster "$$cluster" --services "$$service" \
-			--query 'services[0].[length(deployments), runningCount, desiredCount]' --output text); \
-		read -r deployments running desired <<< "$$state"; \
-		if [ "$$deployments" = "1" ] && [ "$$running" = "$$desired" ] && curl -sf --max-time 5 "$$url/api/server" > /dev/null; then \
-			echo "Traccar $(ENV) is up at $$url (deployments=$$deployments running=$$running/$$desired)"; exit 0; \
+		tasks=$$(aws ecs list-tasks --cluster "$$cluster" --service-name "$$service" --desired-status RUNNING --query 'taskArns' --output text); \
+		running=""; \
+		if [ -n "$$tasks" ] && [ "$$tasks" != "None" ]; then \
+			running=$$(aws ecs describe-tasks --cluster "$$cluster" --tasks $$tasks \
+				--query 'tasks[?lastStatus==`RUNNING`].taskDefinitionArn' --output text | tr '\t' '\n' | sort -u); \
 		fi; \
-		echo "Waiting for Traccar $(ENV) ($$i/30): deployments=$$deployments running=$$running/$$desired"; sleep 10; \
+		if [ "$$running" = "$$expected" ] && curl -sf --max-time 5 "$$url/api/server" > /dev/null; then \
+			echo "Traccar $(ENV) is up at $$url running $$running"; exit 0; \
+		fi; \
+		echo "Waiting for Traccar $(ENV) ($$i/30): running=[$${running:-none}]"; sleep 10; \
 	done; \
-	echo "Traccar $(ENV) did not become healthy at $$url"; exit 1
+	echo "Traccar $(ENV) is not running the expected task definition or not answering at $$url"; exit 1

@@ -245,6 +245,13 @@ resource "aws_ecs_service" "app" {
     security_groups  = [aws_security_group.app.id]
     assign_public_ip = false
   }
+
+  # Floci accepts UpdateService but does not apply a new task definition to an existing
+  # service, so the running tasks never change. Recreating the service on every new
+  # task definition makes each deploy (and rollback) real. Remove on AWS: ECS rolls tasks itself.
+  lifecycle {
+    replace_triggered_by = [aws_ecs_task_definition.app]
+  }
 }
 
 # --- Backups (Prod) ------------------------------------------------------------
