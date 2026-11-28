@@ -19,6 +19,7 @@ provider "aws" {
     s3             = var.aws_endpoint
     secretsmanager = var.aws_endpoint
     sns            = var.aws_endpoint
+    sqs            = var.aws_endpoint
     sts            = var.aws_endpoint
   }
 

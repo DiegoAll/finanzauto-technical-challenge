@@ -12,6 +12,7 @@ skip-check:
   - CKV_AWS_149   # Secrets Manager secret with a CMK.
   - CKV_AWS_158   # CloudWatch log group with a CMK.
   - CKV_AWS_145   # S3 buckets with KMS instead of SSE-S3 (AES256).
+  - CKV_AWS_26    # SNS alerts topic with KMS: KMS not exercised on Floci; alerts carry no sensitive data.
   # Secrets
   - CKV2_AWS_57   # Automatic rotation needs a rotation Lambda and a Traccar restart strategy; out of scope.
   # S3 (state and backup buckets)
