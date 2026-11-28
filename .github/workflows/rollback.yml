@@ -1,0 +1,45 @@
+# O7: return Prod to a previous version in under 5 minutes.
+# No build: the image for that commit already exists in GHCR (tag = commit SHA).
+# Same reusable deploy job as the CD (plan, apply, smoke test), with the production approval gate.
+name: Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Full commit SHA of a version already published in GHCR (see the package versions)
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cd
+  cancel-in-progress: false
+
+jobs:
+  resolve:
+    name: Resolve image
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.ref.outputs.image }}
+    steps:
+      - name: Validate tag and build image reference
+        id: ref
+        env:
+          TAG: ${{ inputs.image_tag }}
+        run: |
+          if [[ ! "$TAG" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::image_tag must be a full 40-character commit SHA"; exit 1
+          fi
+          echo "image=ghcr.io/${GITHUB_REPOSITORY,,}/traccar:${TAG}" >> "$GITHUB_OUTPUT"
+
+  rollback-prod:
+    name: Roll back Prod
+    needs: resolve
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: production
+      env_name: prod
+      image: ${{ needs.resolve.outputs.image }}

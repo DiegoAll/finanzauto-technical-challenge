@@ -1,0 +1,32 @@
+# B3: automatic update PRs. Every PR goes through the same CI and branch protection as any other change.
+# Commit messages follow Conventional Commits (build(deps): ...).
+version: 2
+updates:
+  # Traccar base image (tag + digest) in images/traccar/Dockerfile
+  - package-ecosystem: docker
+    directory: /images/traccar
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: build(deps)
+
+  # Terraform providers in the root configurations (lock files live there, DD-12)
+  - package-ecosystem: terraform
+    directories:
+      - /infra/bootstrap
+      - /infra/environments
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: build(deps)
+
+  # GitHub Actions pinned by SHA: Dependabot updates the SHA and the version comment (DD-21)
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci(deps)

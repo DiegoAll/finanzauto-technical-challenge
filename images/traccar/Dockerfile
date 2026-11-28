@@ -14,8 +14,10 @@ RUN apk upgrade --no-cache \
 
 USER 10001:10001
 
-# Ports: 8082 web UI/API, 5055 OsmAnd protocol (GPS simulator).
+# Default ports: 8082 web UI/API, 5055 OsmAnd protocol (GPS simulator).
+# Each environment overrides them with WEB_PORT and OSMAND_PORT.
 EXPOSE 8082 5055
 
+# Checks the port of the current environment (WEB_PORT), falling back to 8082.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
-  CMD ["wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8082/api/server"]
+  CMD ["sh", "-c", "wget -q -O /dev/null http://127.0.0.1:${WEB_PORT:-8082}/api/server"]
