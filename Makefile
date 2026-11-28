@@ -13,7 +13,7 @@ ACCOUNT_dev  := 111111111111
 ACCOUNT_uat  := 222222222222
 ACCOUNT_prod := 333333333333
 
-.PHONY: help check-env floci-up floci-down bootstrap-plan bootstrap-apply bootstrap-all tf-init tf-plan tf-apply tf-output smoke backup restore-test probe probe-loop status alerts
+.PHONY: help check-env floci-up floci-down bootstrap-plan bootstrap-apply bootstrap-all tf-init tf-plan tf-apply tf-output smoke backup restore-test probe probe-loop status alerts simulate
 
 # Optional image override, e.g. IMAGE=ghcr.io/owner/repo/traccar:<sha>. The CD sets it; empty uses the tfvars value.
 IMAGE ?=
@@ -107,3 +107,6 @@ status: tf-init ## Show the latest metrics and alarm states of ENV
 
 alerts: tf-init ## Show the alerts delivered by SNS to the SQS inbox of ENV
 	export AWS_ACCESS_KEY_ID=$(ACCOUNT_$(ENV)) && scripts/alerts.sh $(ENV)
+
+simulate: check-env ## B1: send simulated GPS positions to ENV over OsmAnd (needs TRACCAR_ADMIN_* in .env)
+	scripts/gps-simulator.sh $(ENV) $(or $(POINTS),60) $(or $(INTERVAL),2)
