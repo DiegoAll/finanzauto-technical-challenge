@@ -1,0 +1,36 @@
+# O8: daily backup of the Prod database to S3, followed by a restore test into a separate,
+# temporary database. Runs on the self-hosted runner, the only one that can reach Floci.
+name: Backup
+
+on:
+  schedule:
+    - cron: "17 6 * * *" # daily, 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: Backup and restore test (prod)
+    runs-on: [self-hosted, floci]
+    env:
+      AWS_ENDPOINT_URL: http://localhost:4566
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_PAGER: ""
+      TF_IN_AUTOMATION: "true"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Backup Prod database to S3
+        run: make backup ENV=prod
+
+      - name: Restore test into a temporary database
+        run: make restore-test ENV=prod
